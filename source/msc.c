@@ -28,11 +28,11 @@
 #include "tusb.h"
 #include "ui.h"
 
-static bool ejected = false;
-static bool errata_last_sector = false;
+DTCM_DATA static bool ejected = false;
+DTCM_DATA static bool errata_last_sector = false;
 
 // Initialize DLDI driver.
-bool msc_dldi_initialize(void) {
+ITCM_CODE bool msc_dldi_initialize(void) {
   const DISC_INTERFACE *io = dldiGetInternal();
   if (!io->startup())
     return false;
@@ -53,7 +53,7 @@ bool msc_dldi_initialize(void) {
 
 // Invoked when received SCSI_CMD_INQUIRY
 // Application fill vendor id, product id and revision with string up to 8, 16, 4 characters respectively
-void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16], uint8_t product_rev[4]) {
+ITCM_CODE void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16], uint8_t product_rev[4]) {
   (void) lun;
 
   const char vid[] = "USB-NDS";
@@ -69,7 +69,7 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
 
 // Invoked when received Test Unit Ready command.
 // return true allowing host to read/write this LUN e.g SD card inserted
-bool tud_msc_test_unit_ready_cb(uint8_t lun) {
+ITCM_CODE bool tud_msc_test_unit_ready_cb(uint8_t lun) {
   // RAM disk is ready until ejected
   if (ejected) {
     // Additional Sense 3A-00 is NOT_FOUND
@@ -80,10 +80,11 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun) {
   return true;
 }
 
-static uint32_t block_count_cached = 0;
+DTCM_DATA static uint32_t block_count_cached = 0;
+DTCM_DATA static uint8_t sec_buffer[512];
 
-uint32_t msc_find_block_count(void) {
-  uint8_t sec_buffer[512];
+ITCM_CODE uint32_t msc_find_block_count(void) {
+//   uint8_t sec_buffer[512];
   if (block_count_cached)
     return block_count_cached;
 
@@ -125,7 +126,7 @@ uint32_t msc_find_block_count(void) {
 
 // Invoked when received SCSI_CMD_READ_CAPACITY_10 and SCSI_CMD_READ_FORMAT_CAPACITY to determine the disk size
 // Application update block count and block size
-void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_size) {
+ITCM_CODE void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_size) {
   (void) lun;
 
   *block_count = msc_find_block_count() - (errata_last_sector ? 1 : 0);
@@ -135,7 +136,7 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
 // Invoked when received Start Stop Unit command
 // - Start = 0 : stopped power mode, if load_eject = 1 : unload disk storage
 // - Start = 1 : active mode, if load_eject = 1 : load disk storage
-bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject) {
+ITCM_CODE bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject) {
   (void) lun;
   (void) power_condition;
 
@@ -156,7 +157,7 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 
 // Callback invoked when received READ10 command.
 // Copy disk's data to buffer (up to bufsize) and return number of copied bytes.
-int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
+ITCM_CODE int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
   const DISC_INTERFACE *io = dldiGetInternal();
 
   ui_toggle_blink_activity();
@@ -170,7 +171,7 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
   }
 }
 
-bool tud_msc_is_writable_cb(uint8_t lun) {
+ITCM_CODE bool tud_msc_is_writable_cb(uint8_t lun) {
   (void) lun;
 
   return true;
@@ -178,7 +179,7 @@ bool tud_msc_is_writable_cb(uint8_t lun) {
 
 // Callback invoked when received WRITE10 command.
 // Process data in buffer to disk's storage and return number of written bytes
-int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
+ITCM_CODE int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
   const DISC_INTERFACE *io = dldiGetInternal();
 
   ui_toggle_blink_write_activity();
@@ -195,7 +196,7 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
 // Callback invoked when received an SCSI command not in built-in list below
 // - READ_CAPACITY10, READ_FORMAT_CAPACITY, INQUIRY, MODE_SENSE6, REQUEST_SENSE
 // - READ10 and WRITE10 has their own callbacks (MUST not be handled here)
-int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, uint16_t bufsize) {
+ITCM_CODE int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, uint16_t bufsize) {
   void const* response = NULL;
   int32_t resplen = 0;
 
@@ -224,3 +225,4 @@ int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, u
 
   return resplen;
 }
+

@@ -8,15 +8,17 @@
 #include <fat.h>
 #include "ui.h"
 
+#include <font.h>
+
 static PrintConsole bottomConsole, topConsole;
 
 extern uint32_t dcd_read_chip_id(void);
 
-void ui_toggle_blink_activity(void) {
+ITCM_CODE void ui_toggle_blink_activity(void) {
     topConsole.fontBgMap[(23 * 32) + 30] ^= 0xA000;
 }
 
-void ui_toggle_blink_write_activity(void) {
+ITCM_CODE void ui_toggle_blink_write_activity(void) {
     topConsole.fontBgMap[(23 * 32) + 29] ^= 0x9000;
 }
 
@@ -26,12 +28,23 @@ void ui_init(void) {
 
     vramSetPrimaryBanks(VRAM_A_LCD, VRAM_B_LCD, VRAM_C_SUB_BG, VRAM_D_MAIN_BG_0x06000000);
     setBrightness(3, 0);
-
-    consoleInit(&bottomConsole,
-        0, BgType_Text4bpp, BgSize_T_256x256, 22, 3, false, true);
+    
+	consoleInit(&bottomConsole,
+        0, BgType_Text4bpp, BgSize_T_256x256, 22, 3, false, false);
     consoleInit(&topConsole,
-        0, BgType_Text4bpp, BgSize_T_256x256, 22, 3, true, true);
-
+        0, BgType_Text4bpp, BgSize_T_256x256, 22, 3, true, false);
+		
+	ConsoleFont font;
+	font.gfx = (u16*)fontTiles;
+	font.pal = NULL;
+	font.numChars = 95;
+	font.numColors =  0;
+	font.bpp = 1;
+	font.asciiOffset = 32;
+	
+	consoleSetFont(&bottomConsole, &font);
+	consoleSetFont(&topConsole, &font);
+	
     consoleSelect(&topConsole);
 
     puts("\x1b[2J"     
@@ -61,7 +74,7 @@ void ui_init(void) {
     puts("\x1b[2J" "\x1b[23;0H");
 
     for (int i = 0; i < 8; i++) {
-        topConsole.fontBgMap[(23 * 32) + 24 + i] = ((uint8_t) 'o') + topConsole.fontCharOffset - topConsole.font.asciiOffset;
+        topConsole.fontBgMap[(23 * 32) + 24 + i] = ((uint8_t) '*') + topConsole.fontCharOffset - topConsole.font.asciiOffset;
     }
 }
 
@@ -80,3 +93,4 @@ void ui_select_top(void) {
 void ui_select_bottom(void) {
     consoleSelect(&bottomConsole);
 }
+

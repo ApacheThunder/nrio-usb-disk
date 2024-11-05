@@ -51,6 +51,32 @@ static void exit_to_loader(void) {
   exit(0);
 }
 
+
+ITCM_CODE int tud_idle() {
+	bool last_key_lid = false;
+
+	while (1) {
+		tud_task();
+	
+		scanKeys();
+		if (keysDown() & KEY_START)
+			break;
+	
+		bool curr_key_lid = keysHeld() & KEY_LID;
+		if (last_key_lid != curr_key_lid) {
+			if (curr_key_lid)
+				powerOff(POWER_ALL_2D);
+			else
+				powerOn(POWER_ALL_2D);
+			swiWaitForVBlank();
+			last_key_lid = curr_key_lid;
+		}
+	}
+	tud_deinit(0);
+	powerOn(POWER_ALL);
+	return 0;
+}
+
 int main(void) {
   defaultExceptionHandler();
   powerOff(POWER_3D_CORE | POWER_MATRIX);
@@ -81,29 +107,8 @@ int main(void) {
   }
 
   printf(UI_COLOR_INFO "Ready. Press START to exit.\n");
-
-  bool last_key_lid = false;
-
-  while (1) {
-    tud_task();
-
-    scanKeys();
-    if (keysDown() & KEY_START)
-        break;
-
-    bool curr_key_lid = keysHeld() & KEY_LID;
-    if (last_key_lid != curr_key_lid) {
-      if (curr_key_lid)
-        powerOff(POWER_ALL_2D);
-      else
-        powerOn(POWER_ALL_2D);
-      swiWaitForVBlank();
-      last_key_lid = curr_key_lid;
-    }
-  }
-
-  tud_deinit(0);
-  powerOn(POWER_ALL);
+  
+  return tud_idle();
 }
 
 // Invoked when device is mounted
@@ -128,3 +133,4 @@ void tud_suspend_cb(bool remote_wakeup_en) {
 // Invoked when usb bus is resumed
 void tud_resume_cb(void) {
 }
+

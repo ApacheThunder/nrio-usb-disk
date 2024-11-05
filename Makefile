@@ -34,7 +34,7 @@ SDIMAGE		:= image.bin
 
 SOURCEDIRS	:= source
 INCLUDEDIRS	:= source
-GFXDIRS		:=
+GFXDIRS		:= graphics
 BINDIRS		:=
 AUDIODIRS	:=
 # A single directory that is the root of NitroFS:

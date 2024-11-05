@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-bool msc_dldi_initialize(void);
+ITCM_CODE bool msc_dldi_initialize(void);
 
 #endif /* _MSC_H_ */
+
