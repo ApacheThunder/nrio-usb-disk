@@ -320,10 +320,11 @@ bool dcd_init(uint8_t rhport, const tusb_rhport_init_t* rh_init) {
       | EXMEMCNT_ROM_TIME2_6_CYCLES | EXMEMCNT_SRAM_TIME_18_CYCLES;
 
     // Check if the chip is an PDIUSBD12 (do other compatible chips exist?)
-    uint16_t chip_id = nrio_d12_read_chip_id();
-    if (chip_id != 0x0000 && chip_id != 0xFFFF) {
+    uint16_t d12_chip_id = nrio_d12_read_chip_id();
+    uint8_t d12_open_bus = NRIO_D12_DATA;
+    if (!((d12_chip_id >> 8) == d12_open_bus && (d12_chip_id & 0xFF) == d12_open_bus)) {
       _dcd.type = NRIO_TYPE_D12;
-      _dcd.chip_id = chip_id;
+      _dcd.chip_id = d12_chip_id;
 
       TU_LOG(3, "Detected D12 chip (%04X)\n", chip_id);
     } else {
